@@ -1,0 +1,16 @@
+AWS Website Article About DevSecOps: URL(http://aws.amazon.com/what-is/devsecops/)
+What are the best practices of DevSecOps?
+Companies use the following approaches to support digital transformation with DevSecOps.
+
+Shift left
+Shift left is the process of checking for vulnerabilities in the earlier stages of software development. By following the process, software teams can prevent undetected security issues when they build the application. For example, developers create secure code in a DevSecOps process.
+
+Shift right
+Shift right indicates the importance of focusing on security after the application is deployed. Some vulnerabilities might escape earlier security checks and become apparent only when customers use the software. 
+
+Use automated security tools
+DevSecOps teams might need to make multiple revisions in a day. To do that, they need to integrate security scanning tools into the CI/CD process. This prevents security evaluations from slowing down development. 
+
+
+
+Source: URL(https://martinfowler.com/articles/continuousIntegration.html)  Continuous Integration Article By Fowler
