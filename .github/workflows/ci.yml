@@ -15,30 +15,33 @@ jobs:
 
     steps:
       # 1️ Checkout code
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+      - name: 🧾 Checkout Repository
+        uses: actions/checkout@v4
 
       # 2️ Setup Node.js environment
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - name: ⚙️ Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # 3️ Install dependencies
-      - name: Install Dependencies
+      # 3️ Install dependencies (inside /app)
+      - name: 📦 Install Dependencies
+        working-directory: ./app
         run: npm install
 
-      # 4️ Run unit tests
-      - name: Run Tests
+      # 4️ Run unit tests (inside /app)
+      - name: 🧪 Run Tests
+        working-directory: ./app
         run: npm test -- --coverage
 
-      # 5️ Build Docker image
-      - name: Build Docker Image
+      # 5️ Build Docker image (inside /app)
+      - name: 🐳 Build Docker Image
+        working-directory: ./app
         run: docker build -t devsecops-demo-api .
 
       # 6️ Upload Docker image artifact
-      - name: Upload Docker Image Artifact
+      - name: 📤 Upload Docker Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: docker-image
-          path: '**/Dockerfile'
+          name: devsecops-demo-api
+          path: ./app
