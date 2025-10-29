@@ -1,0 +1,175 @@
+
+- to set ExecutionPolicy Bypass
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
+# Install dependencies
+npm install
+
+# Run tests
+npm test
+
+# Start locally
+npm start
+
+# Build Docker image
+docker build -t devsecops-demo-api .
+
+# Run Docker container
+docker run -p 3000:3000 devsecops-demo-api
+
+
+- to check docker version
+docker --version
+
+
+docker build -t devsecops-demo-api .
+docker run -p 3000:3000 devsecops-demo-api
+
+
+
+
+
+
+
+All Comamnds:
+
+
+Perfect 👍 — we’ll do it cleanly and make sure you fully understand **what each command does** and **why we need it** in our DevSecOps project.  
+
+---
+
+# 🧱 **Purpose: Why We’re Using Docker**
+
+Docker lets us:
+- Package our app + dependencies in a **single container image**.  
+- Run it **anywhere** (locally, in AWS, or in CI/CD) exactly the same way.  
+- Provide a **clean baseline environment** for our automated testing and deployment.  
+
+In DevSecOps, this is crucial because:
+- The same container runs in development, CI, and production.  
+- Security scanners (like **Trivy**, **SonarCloud**, etc.) can easily analyze that image.  
+- We can deploy it automatically to AWS using Terraform.
+
+So — Docker is the foundation of **automation and reproducibility** in your pipeline.
+
+---
+
+# ⚙️ **Step-by-Step Commands for Windows (PowerShell)**
+
+### **1️⃣ Initialize the Node.js project**
+If you haven’t already:
+
+```powershell
+npm init -y
+```
+
+> Creates a basic `package.json` for your app.
+
+---
+
+### **2️⃣ Install dependencies**
+
+```powershell
+npm install express
+npm install --save-dev jest supertest
+```
+
+> - `express` → our web framework  
+> - `jest` → unit testing  
+> - `supertest` → used for API endpoint testing  
+
+---
+
+### **3️⃣ Run local tests**
+
+```powershell
+npm test
+```
+
+✅ Confirms that your app and tests are working before containerizing.
+
+---
+
+### **4️⃣ Build Docker image**
+
+```powershell
+docker build -t devsecops-demo-api .
+```
+
+> - `docker build` → builds a container image from the `Dockerfile` in the current directory.  
+> - `-t devsecops-demo-api` → gives your image a name/tag.  
+> - `.` → means “use the current folder as context” (so it finds your `Dockerfile` and app files).  
+
+---
+
+### **5️⃣ Verify the image**
+
+```powershell
+docker images
+```
+
+You’ll see something like:
+```
+REPOSITORY             TAG       IMAGE ID       CREATED          SIZE
+devsecops-demo-api     latest    a1b2c3d4e5f6   30 seconds ago   160MB
+```
+
+---
+
+### **6️⃣ Run the container**
+
+```powershell
+docker run -d -p 3000:3000 devsecops-demo-api
+```
+
+> - `-d` → run detached (in background)  
+> - `-p 3000:3000` → maps container’s port 3000 to your local machine’s port 3000  
+> - `devsecops-demo-api` → the image name you built  
+
+✅ Visit: [http://localhost:3000/health](http://localhost:3000/health)  
+You should see:
+```json
+{"status": "OK", "timestamp": "2025-10-28T21:00:00Z"}
+```
+
+---
+
+### **7️⃣ Stop and clean up (optional)**
+
+To stop the container:
+
+```powershell
+docker ps
+```
+
+Find the **CONTAINER ID**, then run:
+
+```powershell
+docker stop <container_id>
+```
+
+To remove it completely:
+
+```powershell
+docker rm <container_id>
+```
+
+---
+
+# 💡 **Summary**
+
+| Step | Command | Purpose |
+|------|----------|----------|
+| 1 | `npm init -y` | Initialize Node.js project |
+| 2 | `npm install express jest supertest` | Install dependencies |
+| 3 | `npm test` | Run automated tests |
+| 4 | `docker build -t devsecops-demo-api .` | Build container image |
+| 5 | `docker images` | Check built images |
+| 6 | `docker run -p 3000:3000 devsecops-demo-api` | Run container |
+| 7 | `docker stop` / `docker rm` | Stop and remove containers |
+
+---
+
+Next, after this, we’ll integrate it into a **GitHub Actions CI pipeline (Week 4)** — that will **automatically build, test, and generate metrics** every time you push code.  
+
+Would you like me to guide you next on writing the `.github/workflows/ci.yml` file for Week 4?
