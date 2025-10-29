@@ -38,7 +38,7 @@ jobs:
 
       # 6️ Upload Docker image artifact
       - name: Upload Docker Image Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: docker-image
           path: '**/Dockerfile'
