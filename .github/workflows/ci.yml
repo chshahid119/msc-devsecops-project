@@ -13,12 +13,8 @@ jobs:
     env:
       NODE_ENV: test
 
-    defaults:
-      run:
-        working-directory: ./app   # 👈 Forces all commands to run inside /app folder
-
     steps:
-      # 1️ Checkout code
+      # 1️ Checkout repository
       - name: 🧾 Checkout Repository
         uses: actions/checkout@v4
 
@@ -31,18 +27,21 @@ jobs:
       # 3️ Install dependencies
       - name: 📦 Install Dependencies
         run: npm install
+        working-directory: ./app   # 👈 explicitly tell it to go inside app
 
       # 4️ Run tests
       - name: 🧪 Run Tests
         run: npm test -- --coverage
+        working-directory: ./app   # 👈 same here
 
       # 5️ Build Docker image
       - name: 🐳 Build Docker Image
         run: docker build -t devsecops-demo-api .
+        working-directory: ./app   # 👈 and here too
 
       # 6️ Upload Docker artifact
       - name: 📤 Upload Docker Artifact
         uses: actions/upload-artifact@v4
         with:
           name: devsecops-demo-api
-          path: ./app
+          path: ./app/Dockerfile
