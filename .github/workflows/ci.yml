@@ -13,33 +13,34 @@ jobs:
     env:
       NODE_ENV: test
 
+    defaults:
+      run:
+        working-directory: ./app   # 👈 Forces all commands to run inside /app folder
+
     steps:
       # 1️ Checkout code
       - name: 🧾 Checkout Repository
         uses: actions/checkout@v4
 
-      # 2️ Setup Node.js environment
+      # 2️ Setup Node.js
       - name: ⚙️ Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # 3️ Install dependencies (inside /app)
+      # 3️ Install dependencies
       - name: 📦 Install Dependencies
-        working-directory: ./app
         run: npm install
 
-      # 4️ Run unit tests (inside /app)
+      # 4️ Run tests
       - name: 🧪 Run Tests
-        working-directory: ./app
         run: npm test -- --coverage
 
-      # 5️ Build Docker image (inside /app)
+      # 5️ Build Docker image
       - name: 🐳 Build Docker Image
-        working-directory: ./app
         run: docker build -t devsecops-demo-api .
 
-      # 6️ Upload Docker image artifact
+      # 6️ Upload Docker artifact
       - name: 📤 Upload Docker Artifact
         uses: actions/upload-artifact@v4
         with:
