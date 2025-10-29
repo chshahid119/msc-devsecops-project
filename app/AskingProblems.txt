@@ -1,0 +1,157 @@
+Question: When Our CI pipeline created a Docker image does it uploaded automatically on Repo?
+Answer: No — it **does not get uploaded automatically** to your GitHub repository.  
+
+Here’s why:  
+
+---
+
+### **1️⃣ What happens in the CI pipeline**
+
+When your workflow runs:
+
+```bash
+docker build -t devsecops-demo-api ./app
+```
+
+- Docker reads your `Dockerfile` and **builds an image locally** on the GitHub Actions runner.  
+- That image **only exists inside the temporary runner VM**.  
+- After the workflow finishes, the runner is destroyed and the image disappears.
+
+---
+
+### **2️⃣ Why it doesn’t appear in your repo**
+
+- Your GitHub repo only stores **files** (code, Dockerfile, configs, docs).  
+- Docker images are **binary artifacts**, not plain files — GitHub repos are not meant to store them.  
+- The `Dockerfile` is just a **text recipe**, not the image itself.  
+
+---
+
+### **3️⃣ How to make the image available**
+
+If you want the image to persist or be reusable:
+
+1. **Push to a Docker registry** (preferred):
+
+   - Docker Hub: `docker push yourusername/devsecops-demo-api:latest`  
+   - GitHub Container Registry: `ghcr.io/username/devsecops-demo-api:latest`  
+   - AWS ECR: `aws ecr push ...`
+
+2. **Save as a tar file and upload as CI artifact** (temporary, just for download):
+
+```bash
+docker save devsecops-demo-api -o devsecops-demo-api.tar
+```
+
+Then use `actions/upload-artifact` to upload that tar.
+
+---
+
+### ✅ Key takeaway
+
+- **CI builds the image, but GitHub repo is not automatically updated.**  
+- If you want it automatically available after CI, you must **push it to a registry** as part of your workflow.  
+
+---
+
+
+
+
+
+----------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+Ah, yes — let me clarify exactly what happens when you run this step in your GitHub Actions workflow:
+
+---
+
+## **1️⃣ Where is the Docker image stored?**
+
+When you run:
+
+```bash
+docker build -t devsecops-demo-api .
+```
+
+* GitHub Actions builds the Docker image **inside the runner VM** (the temporary Ubuntu machine).
+* **It is not automatically pushed to GitHub or any external registry**.
+* The image only exists **temporarily on that runner** and is gone when the runner shuts down after the job finishes.
+
+So the “artifact” step you added:
+
+```yaml
+- name: Upload Docker Artifact
+  uses: actions/upload-artifact@v4
+  with:
+    name: devsecops-demo-api
+    path: ./app/Dockerfile
+```
+
+* **Does not save the built Docker image**.
+* It only uploads the **Dockerfile** (the text file), **not the actual image**.
+* If you want to save the actual Docker image, you need to either:
+
+  1. Push it to a **Docker registry** (like Docker Hub, AWS ECR, or GitHub Container Registry).
+  2. Save it as a **tar file** and then upload it as an artifact:
+
+```bash
+docker save devsecops-demo-api -o devsecops-demo-api.tar
+```
+
+Then in your workflow:
+
+```yaml
+- name: Upload Docker Image Artifact
+  uses: actions/upload-artifact@v4
+  with:
+    name: devsecops-demo-api
+    path: ./app/devsecops-demo-api.tar
+```
+
+---
+
+## **2️⃣ Does the image automatically update in GitHub repository?**
+
+* **No** — your GitHub repository stores only your **source code**, not Docker images.
+* Building a Docker image locally or in CI **does not modify your repo**.
+* To have the image persist for later use, you must **push it to a registry**. For example:
+
+```bash
+# Tag the image for Docker Hub
+docker tag devsecops-demo-api yourdockerhubusername/devsecops-demo-api:latest
+
+# Push to Docker Hub
+docker push yourdockerhubusername/devsecops-demo-api:latest
+```
+
+* After this, anyone (or any deployment pipeline) can pull the latest image using:
+
+```bash
+docker pull yourdockerhubusername/devsecops-demo-api:latest
+```
+
+---
+
+### ✅ Summary
+
+| Question                                     | Answer                                                                                  |
+| -------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Where is the image saved?                    | Temporarily on the GitHub Actions runner VM. It disappears after the workflow finishes. |
+| Is it saved in GitHub repo automatically?    | No, the repo only stores code, not Docker images.                                       |
+| How to persist it?                           | Push to Docker Hub, AWS ECR, GitHub Container Registry, or save as a tar file artifact. |
+| Does workflow auto-update the image in repo? | No, you must configure a push step to a registry.                                       |
+
+---
+
+If you want, I can **update your GitHub Actions workflow** so that after every successful CI run it **pushes the Docker image to GitHub Container Registry automatically**, making it persistent and ready for Week 4/5 deployment.
+
+Do you want me to do that next?
