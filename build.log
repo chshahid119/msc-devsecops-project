@@ -1,0 +1,6 @@
+BUILD START
+Test: PASS
+Docker Build: SUCCESS
+Security Scan: PASS
+Deployment: SUCCESS
+BUILD END

@@ -1,0 +1,48 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = "devsecops-app"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'develop', url: 'https://github.com/username/devsecops-pipeline.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'docker build -t $DOCKER_IMAGE ./app'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh 'python -m unittest discover -s app/tests'
+            }
+        }
+
+        stage('Security Scan') {
+            steps {
+                sh 'trivy image --severity CRITICAL,HIGH $DOCKER_IMAGE'
+            }
+        }
+
+        stage('Push Docker') {
+            environment {
+                DOCKER_USERNAME = credentials('docker-username')
+                DOCKER_PASSWORD = credentials('docker-password')
+            }
+            steps {
+                sh '''
+                echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+                docker tag $DOCKER_IMAGE $DOCKER_USERNAME/$DOCKER_IMAGE:latest
+                docker push $DOCKER_USERNAME/$DOCKER_IMAGE:latest
+                '''
+            }
+        }
+    }
+}
+ 
