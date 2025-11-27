@@ -1,4 +1,3 @@
 # Ignore low severity vulnerabilities for demo purposes
 LOW
 MEDIUM
- 

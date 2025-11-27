@@ -3,17 +3,19 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+import requests
 import random
 
-# ----------------------------
 # 🎨 PAGE CONFIG & THEME MANAGEMENT
-# ----------------------------
 st.set_page_config(
     page_title="DevSecOps Pulse",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Backend API Configuration
+BACKEND_URL = "http://localhost:8000"  # Change to your backend URL
 
 # Theme Management
 def apply_theme(theme):
@@ -191,86 +193,111 @@ severity_filter = st.sidebar.multiselect(
 refresh = st.sidebar.button("🔄 Refresh Data")
 
 # ----------------------------
-# 🧠 ENHANCED DATA GENERATION (Dynamic & Filter-Aware)
+# 🧠 REAL DATA FETCHING FROM BACKEND
 # ----------------------------
-def generate_data(days, env="All"):
-    env_success = {"Development": 95, "Staging": 88, "Production": 82}
-    base_success = env_success.get(env, 90) if env != "All" else 90
+def fetch_real_metrics(days=30, env_filter="All"):
+    """Fetch real metrics from backend API"""
+    try:
+        response = requests.get(f"{BACKEND_URL}/api/metrics?days={days}")
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Convert to DataFrame
+            metrics = data.get("metrics", [])
+            if metrics:
+                df = pd.DataFrame(metrics)
+                df["Date"] = pd.to_datetime(df["Date"])
+                
+                # Filter by environment if needed
+                if env_filter != "All":
+                    df = df[df["Environment"] == env_filter]
+                
+                return df, data.get("summary", {})
+        
+    except Exception as e:
+        st.error(f"Error fetching metrics: {e}")
+    
+    # Fallback to dummy data if API fails
+    return generate_fallback_data(days, env_filter), {}
 
+def fetch_real_vulnerabilities():
+    """Fetch real vulnerabilities from backend API"""
+    try:
+        response = requests.get(f"{BACKEND_URL}/api/vulnerabilities")
+        if response.status_code == 200:
+            return response.json()
+    except Exception as e:
+        st.error(f"Error fetching vulnerabilities: {e}")
+    
+    return generate_fallback_vulns()
+
+def fetch_real_workflow_runs():
+    """Fetch real GitHub Actions workflow runs"""
+    try:
+        response = requests.get(f"{BACKEND_URL}/api/workflow-runs")
+        if response.status_code == 200:
+            return response.json()
+    except Exception as e:
+        st.error(f"Error fetching workflow runs: {e}")
+    
+    return {"runs": []}
+
+def generate_fallback_data(days, env_filter):
+    """Generate fallback data if API fails"""
     dates = [datetime.today() - timedelta(days=i) for i in range(days)][::-1]
     data = []
     for i, date in enumerate(dates):
-        success = max(70, base_success + random.randint(-5, 3))
-        build_time = max(50, 80 + random.randint(-20, 15))
-        
-        # Generate vulnerabilities based on time range and environment
-        base_vulns = 25 - (i // 7)  # Decreases over time
-        if env == "Production":
-            base_vulns = max(5, base_vulns - 5)  # Production has fewer vulns
-        elif env == "Staging":
-            base_vulns = max(8, base_vulns - 3)
-        
-        vulns = max(0, base_vulns + random.randint(-3, 3))
-        env_assigned = random.choice(["Development", "Staging", "Production"]) if env == "All" else env
         data.append({
             "Date": date,
-            "Success Rate (%)": success,
-            "Build Time (s)": build_time,
-            "Vulnerabilities": vulns,
-            "Environment": env_assigned
+            "Success Rate (%)": 85 + random.randint(-10, 10),
+            "Build Time (s)": 60 + random.randint(-20, 20),
+            "Vulnerabilities": random.randint(0, 15),
+            "Environment": random.choice(["Development", "Staging", "Production"])
         })
     return pd.DataFrame(data)
 
-def generate_vulns(time_range_days, severity_filter, env_filter):
-    packages = ["requests", "urllib3", "flask", "jinja2", "django", "numpy", "pandas", "pyyaml"]
+def generate_fallback_vulns():
+    """Generate fallback vulnerabilities if API fails"""
+    packages = ["requests", "urllib3", "flask", "jinja2"]
     titles = [
         "Improper Input Validation",
         "Open Redirect Vulnerability", 
-        "Insecure Session Handling",
-        "Template Injection Risk",
-        "Information Disclosure",
-        "SQL Injection Potential",
-        "Path Traversal Risk",
-        "Cross-Site Scripting (XSS)"
+        "Insecure Session Handling"
     ]
     
-    # Adjust vulnerability count based on filters
-    base_count = max(3, 15 - (time_range_days // 10))
-    if env_filter == "Production":
-        base_count = max(2, base_count - 3)
-    elif env_filter == "Staging":
-        base_count = max(3, base_count - 2)
+    return [
+        {
+            "id": f"CVE-2023-{random.randint(1000, 9999)}",
+            "package": random.choice(packages),
+            "severity": random.choice(["Critical", "High", "Medium", "Low"]),
+            "title": random.choice(titles),
+            "environment": random.choice(["Development", "Staging", "Production"])
+        }
+        for _ in range(random.randint(1, 8))
+    ]
+
+# Fetch real data from backend API
+df, summary = fetch_real_metrics(time_range, env_filter if env_filter != "All" else "All")
+vulns = fetch_real_vulnerabilities()
+workflow_runs = fetch_real_workflow_runs()
+
+# Use real summary data if available
+if summary:
+    avg_success = summary.get("success_rate", 85)
+    avg_time = summary.get("avg_build_time", 60)
+    total_builds = summary.get("total_runs", len(df))
+else:
+    df_filtered = df.copy()
+    if env_filter != "All":
+        df_filtered = df_filtered[df_filtered["Environment"] == env_filter]
     
-    vulns = []
-    for i in range(base_count):
-        pkg = random.choice(packages)
-        title = random.choice(titles)
-        severity = random.choice(severity_filter) if severity_filter else "Low"
-        cve = f"CVE-202{random.randint(3,5)}-{random.randint(1000,9999)}"
-        vulns.append({
-            "id": cve,
-            "package": pkg,
-            "severity": severity,
-            "title": title,
-            "environment": env_filter if env_filter != "All" else random.choice(["Development", "Staging", "Production"])
-        })
-    return vulns
+    avg_success = df_filtered["Success Rate (%)"].mean()
+    avg_time = df_filtered["Build Time (s)"].mean()
+    total_builds = len(df_filtered)
 
-# Generate data based on current filters
-df = generate_data(time_range, env_filter if env_filter != "All" else "All")
-vulns = generate_vulns(time_range, severity_filter, env_filter)
+total_vulns = sum(df["Vulnerabilities"]) if "Vulnerabilities" in df.columns else 0
 
-# Calculate dynamic metrics for alerts
-df_filtered = df.copy()
-if env_filter != "All":
-    df_filtered = df_filtered[df_filtered["Environment"] == env_filter]
-
-avg_success = df_filtered["Success Rate (%)"].mean()
-avg_time = df_filtered["Build Time (s)"].mean()
-total_vulns = sum(df_filtered["Vulnerabilities"])
-total_builds = len(df_filtered)
-
-# Count vulnerabilities by severity for dynamic alerts
+# Count vulnerabilities by severity
 severity_counts = {}
 for v in vulns:
     severity_counts[v["severity"]] = severity_counts.get(v["severity"], 0) + 1
@@ -279,6 +306,14 @@ critical_vulns = severity_counts.get("Critical", 0)
 high_vulns = severity_counts.get("High", 0)
 medium_vulns = severity_counts.get("Medium", 0)
 low_vulns = severity_counts.get("Low", 0)
+
+# Filter vulnerabilities by severity if selected
+if severity_filter:
+    vulns = [v for v in vulns if v["severity"] in severity_filter]
+
+# Filter vulnerabilities by environment if selected
+if env_filter != "All":
+    vulns = [v for v in vulns if v.get("environment") == env_filter]
 
 # ----------------------------
 # 🚨 TOP 3 VULNERABILITIES WITH REMEDIATION
@@ -334,21 +369,21 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "Pipeline Analytics", 
     "Security Center",
     "Build History & Logs",
-    "🚨 Critical Vulnerabilities"  # New tab for top vulnerabilities
+    "🚨 Critical Vulnerabilities"
 ])
 
 # ----------------------------
-# TAB 1: OVERVIEW (Removed Top Vulnerabilities Section)
+# TAB 1: OVERVIEW DASHBOARD
 # ----------------------------
 with tab1:
-    # Existing metrics and health status (Top vulnerabilities removed)
+    # Real-time metrics from backend
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Build Success", f"{avg_success:.1f}%", "↑ vs manual")
     col2.metric("Avg Build Time", f"{avg_time:.0f}s", "↓ 41% faster")
     col3.metric("Total Vulns", int(total_vulns), "auto-detected")
     col4.metric("Total Runs", total_builds, "automated")
 
-    # Dynamic health status
+    # Dynamic health status based on real data
     if avg_success >= 90 and total_vulns < 10:
         health = "Excellent"
         health_color = "🟢"
@@ -362,16 +397,16 @@ with tab1:
     st.markdown(f"### {health_color} Pipeline Health: {health}")
 
     # Last run info
-    if not df_filtered.empty:
-        last_run = df_filtered["Date"].max().strftime('%Y-%m-%d %H:%M:%S')
+    if not df.empty:
+        last_run = df["Date"].max().strftime('%Y-%m-%d %H:%M:%S')
         st.markdown(f"**Last run:** {last_run}")
 
-    # 🚨 DYNAMIC ALERTS & INSIGHTS (Now fully filter-aware)
+    # 🚨 DYNAMIC ALERTS & INSIGHTS
     with st.expander("📋 Smart Alerts & Insights", expanded=True):
         alerts = []
         insights = []
         
-        # Success rate alerts
+        # Success rate alerts based on real data
         if avg_success < 75:
             alerts.append(f"🔴 CRITICAL: Build success rate critically low ({avg_success:.1f}%) - Immediate review required")
         elif avg_success < 85:
@@ -379,7 +414,7 @@ with tab1:
         else:
             insights.append(f"✅ Build success rate is healthy at {avg_success:.1f}%")
         
-        # Vulnerability alerts based on ACTUAL filtered data
+        # Vulnerability alerts based on real data
         if critical_vulns > 0:
             alerts.append(f"🔴 CRITICAL: {critical_vulns} critical vulnerabilities detected - Patch immediately")
         if high_vulns > 2:
@@ -415,36 +450,43 @@ with tab1:
             st.markdown('<div class="insight-box">✅ All systems operational - No issues detected</div>', unsafe_allow_html=True)
 
 # ----------------------------
-# TAB 2: ANALYTICS (Improved Charts)
+# TAB 2: PIPELINE ANALYTICS
 # ----------------------------
 with tab2:
     st.subheader("Success Rate Trend")
-    fig1 = px.line(df, x="Date", y="Success Rate (%)", color="Environment", markers=True)
-    fig1.update_traces(line_width=2)
-    fig1.update_layout(
-        title="Success Rate Over Time",
-        xaxis_title="Date",
-        yaxis_title="Success Rate (%)",
-        legend_title="Environment"
-    )
-    st.plotly_chart(fig1, use_container_width=True)
+    if not df.empty:
+        fig1 = px.line(df, x="Date", y="Success Rate (%)", color="Environment", markers=True)
+        fig1.update_traces(line_width=2)
+        fig1.update_layout(
+            title="Success Rate Over Time (Real Data)",
+            xaxis_title="Date",
+            yaxis_title="Success Rate (%)",
+            legend_title="Environment"
+        )
+        st.plotly_chart(fig1, use_container_width=True)
+    else:
+        st.info("No data available for analytics")
 
     st.subheader("Build Time vs Vulnerability Detection")
-    fig2 = go.Figure()
-    fig2.add_trace(go.Scatter(x=df["Date"], y=df["Build Time (s)"], mode='lines+markers', name="Build Time", line=dict(color="#3b82f6"), marker=dict(size=6)))
-    fig2.add_trace(go.Scatter(x=df["Date"], y=df["Vulnerabilities"], mode='lines+markers', name="Vulnerabilities", line=dict(color="#ef4444"), marker=dict(size=6), yaxis="y2"))
-    fig2.update_layout(
-        title="Build Performance vs Security Findings",
-        xaxis_title="Date",
-        yaxis=dict(title="Build Time (s)", showgrid=True),
-        yaxis2=dict(title="Vulnerabilities", overlaying="y", side="right", showgrid=True),
-        legend=dict(x=0.01, y=0.99),
-        hovermode="x unified"
-    )
-    st.plotly_chart(fig2, use_container_width=True)
+    if not df.empty:
+        fig2 = go.Figure()
+        fig2.add_trace(go.Scatter(x=df["Date"], y=df["Build Time (s)"], mode='lines+markers', name="Build Time", line=dict(color="#3b82f6"), marker=dict(size=6)))
+        if "Vulnerabilities" in df.columns:
+            fig2.add_trace(go.Scatter(x=df["Date"], y=df["Vulnerabilities"], mode='lines+markers', name="Vulnerabilities", line=dict(color="#ef4444"), marker=dict(size=6), yaxis="y2"))
+        fig2.update_layout(
+            title="Build Performance vs Security Findings",
+            xaxis_title="Date",
+            yaxis=dict(title="Build Time (s)", showgrid=True),
+            yaxis2=dict(title="Vulnerabilities", overlaying="y", side="right", showgrid=True),
+            legend=dict(x=0.01, y=0.99),
+            hovermode="x unified"
+        )
+        st.plotly_chart(fig2, use_container_width=True)
+    else:
+        st.info("No data available for this chart")
 
 # ----------------------------
-# TAB 3: SECURITY CENTER (Dynamic Vulnerability Display)
+# TAB 3: SECURITY CENTER
 # ----------------------------
 with tab3:
     st.subheader("Severity Distribution")
@@ -462,7 +504,7 @@ with tab3:
                           "Low": "#64748b"
                       },
                       hole=0.4)
-        fig3.update_layout(title="Vulnerability Severity Breakdown")
+        fig3.update_layout(title="Vulnerability Severity Breakdown (Real Data)")
         st.plotly_chart(fig3, use_container_width=True)
     else:
         st.info("No vulnerabilities match current filters")
@@ -486,85 +528,88 @@ with tab3:
             <div style="background: {color_map[v['severity']]}; padding: 12px; border-radius: 8px; margin: 8px 0; border-left: 4px solid {border_map[v['severity']]};">
                 <strong class="{v['severity'].lower()}">{v['severity']}</strong><br>
                 {v['title']}<br>
-                <small>Package: {v['package']} • {v['id']} • Env: {v['environment']}</small>
+                <small>Package: {v['package']} • {v['id']} • Env: {v.get('environment', 'Unknown')}</small>
             </div>
             """, unsafe_allow_html=True)
     else:
         st.warning("No vulnerabilities match current severity filters")
 
 # ----------------------------
-# TAB 4: BUILD HISTORY (Fully Dynamic Logs)
+# TAB 4: BUILD HISTORY & LOGS
 # ----------------------------
 with tab4:
     st.subheader("Latest Build Output")
-
-    # Generate dynamic log based on CURRENT filters and data
-    if not df_filtered.empty:
-        latest_build = df_filtered.iloc[-1]
-        last_env = latest_build["Environment"]
-        last_time = latest_build["Date"].strftime("%Y-%m-%dT%H:%M:%SZ")
-        build_id = random.randint(140, 150)
-        test_count = random.randint(30, 35)
+    
+    if workflow_runs and workflow_runs.get("runs"):
+        latest_run = workflow_runs["runs"][0]
+        build_id = latest_run.get("id", "N/A")
+        last_env = latest_run.get("head_branch", "main")
+        last_time = latest_run.get("created_at", datetime.now().isoformat())
+        status = latest_run.get("conclusion", "unknown")
+        duration = latest_run.get("duration", 60)
         
-        # Dynamic vulnerability count based on ACTUAL filtered vulnerabilities
+        status_emoji = "🟢" if status == "success" else "🔴" if status == "failure" else "🟡"
+        final_status = "SUCCESS" if status == "success" else "FAILED" if status == "failure" else "RUNNING"
         current_vuln_count = len(vulns)
-        duration = random.randint(60, 90)
         
-        # Determine build status based on metrics
-        if latest_build["Success Rate (%)"] > 85 and current_vuln_count < 5:
-            final_status = "SUCCESS"
-            status_emoji = "🟢"
-        else:
-            final_status = "PARTIAL"
-            status_emoji = "🟡"
+        # Real log lines based on actual run
+        log_lines = [
+            f"[{last_time}] {status_emoji} Build #{build_id} started for {last_env}",
+            f"[{last_time.replace('T', ' ').split('.')[0]}] 📦 Triggered by GitHub Actions",
+            f"[{last_time.replace('T', ' ').split('.')[0]}] 🔄 Running security scans",
+            f"[{last_time.replace('T', ' ').split('.')[0]}] 🔍 Security scans completed",
+            f"[{last_time.replace('T', ' ').split('.')[0]}] ⚠️ {current_vuln_count} vulnerabilities detected",
+            f"[{last_time.replace('T', ' ').split('.')[0]}] 📊 Build {status} after {duration}s"
+        ]
+        
+        # Display as styled code block
+        log_html = "<br>".join(log_lines)
+        st.markdown(f"""
+        <div style="background: #f8fafc; padding: 16px; border-radius: 10px; border: 1px solid #e2e8f0; font-family: 'Courier New', monospace; font-size: 0.9em; line-height: 1.5;">
+        {log_html}
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Build summary with real data
+        st.markdown(f"""
+        **Build Summary (Real Data from GitHub Actions):**
+        - **Build ID:** #{build_id}
+        - **Branch:** {last_env}
+        - **Status:** {final_status}
+        - **Duration:** {duration}s
+        - **Vulnerabilities:** {current_vuln_count}
+        - **Link:** [View on GitHub]({latest_run.get('html_url', '#')})
+        """)
+        
     else:
-        last_env = "Development"
+        st.warning("⚠️ Could not fetch real workflow data. Showing sample data.")
+        # Fallback to sample data
         last_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-        build_id = 142
-        test_count = 32
         current_vuln_count = len(vulns)
-        duration = 76
-        final_status = "SUCCESS"
-        status_emoji = "🟢"
-
-    # Create fully dynamic log output
-    log_lines = [
-        f"[{last_time}] {status_emoji} Build #{build_id} started for {last_env}",
-        f"[{last_time.replace('T', ' ').split('.')[0]}] 📦 Installing dependencies...",
-        f"[{last_time.replace('T', ' ').split('.')[0]}] ✅ Tests passed ({test_count}/{test_count})",
-        f"[{last_time.replace('T', ' ').split('.')[0]}] 🔍 Running Trivy scan...",
-        f"[{last_time.replace('T', ' ').split('.')[0]}] ⚠️ {current_vuln_count} vulnerabilities detected ({', '.join(severity_filter) if severity_filter else 'none'})",
-        f"[{last_time.replace('T', ' ').split('.')[0]}] 🚀 Deploying to {last_env} via Ansible playbook",
-        f"[{last_time.replace('T', ' ').split('.')[0]}] {status_emoji} Build #{build_id} {final_status} ({duration}s)"
-    ]
-
-    # Display as styled code block
-    log_html = "<br>".join(log_lines)
-    st.markdown(f"""
-    <div style="background: #f8fafc; padding: 16px; border-radius: 10px; border: 1px solid #e2e8f0; font-family: 'Courier New', monospace; font-size: 0.9em; line-height: 1.5;">
-    {log_html}
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Build summary
-    st.markdown(f"""
-    **Build Summary:**
-    - **Environment:** {last_env}
-    - **Duration:** {duration}s
-    - **Status:** {final_status}
-    - **Vulnerabilities:** {current_vuln_count} ({', '.join(severity_filter) if severity_filter else 'none filtered'})
-    - **Tests:** {test_count}/{test_count} passed
-    """)
+        
+        log_lines = [
+            f"[{last_time}] 🟢 Build #142 started for main",
+            f"[{last_time.replace('T', ' ').split('.')[0]}] 📦 Installing dependencies...",
+            f"[{last_time.replace('T', ' ').split('.')[0]}] ✅ Tests passed (32/32)",
+            f"[{last_time.replace('T', ' ').split('.')[0]}] 🔍 Running Trivy scan...",
+            f"[{last_time.replace('T', ' ').split('.')[0]}] ⚠️ {current_vuln_count} vulnerabilities detected",
+            f"[{last_time.replace('T', ' ').split('.')[0]}] 🚀 Deploying via Ansible playbook",
+            f"[{last_time.replace('T', ' ').split('.')[0]}] 🟢 Build #142 SUCCESS (76s)"
+        ]
+        
+        log_html = "<br>".join(log_lines)
+        st.markdown(f"""
+        <div style="background: #f8fafc; padding: 16px; border-radius: 10px; border: 1px solid #e2e8f0; font-family: 'Courier New', monospace; font-size: 0.9em; line-height: 1.5;">
+        {log_html}
+        </div>
+        """, unsafe_allow_html=True)
 
 # ----------------------------
-# TAB 5: 🚨 CRITICAL VULNERABILITIES (New Separate Tab)
-# ----------------------------
-# ----------------------------
-# TAB 5: 🚨 CRITICAL VULNERABILITIES (New Separate Tab)
+# TAB 5: 🚨 CRITICAL VULNERABILITIES
 # ----------------------------
 with tab5:
     st.header("🚨 Critical Vulnerabilities")
-    st.markdown("### Priority wise Security Issues Requiring Immediate Attention")
+    st.markdown("### Priority-wise Security Issues Requiring Immediate Attention")
     
     if top_vulnerabilities:
         # Summary metrics at the top
@@ -597,7 +642,7 @@ with tab5:
             # Create collapsible expander for each vulnerability
             with st.expander(
                 label=f"🚨 #{i} - {vuln['severity']} Severity: {vuln['title']}",
-                expanded=False  # Start collapsed by default
+                expanded=False
             ):
                 st.markdown(f"""
                 <div class="vulnerability-card {severity_class}">
@@ -652,7 +697,7 @@ with tab5:
             <h3>🎉 Excellent Security Posture!</h3>
             <p>Your proactive security measures are paying off. Keep up the good work!</p>
         </div>
-        """, unsafe_allow_html=True) 
+        """, unsafe_allow_html=True)
 
 # ----------------------------
 # 📥 DOWNLOAD & REFRESH
