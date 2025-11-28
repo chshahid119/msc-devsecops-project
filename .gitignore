@@ -11,6 +11,7 @@
 *.secrets
 secrets.yaml
 credentials.json
+devsecops-pulse/.env
 
 ###############################################
 #           PYTHON BASICS
