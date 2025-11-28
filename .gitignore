@@ -1,0 +1,176 @@
+###############################################
+#           SECURITY / SECRETS
+###############################################
+.env
+*.env
+.env.*        # .env.dev, .env.prod, etc.
+*.key
+*.pem
+*.cert
+*.token
+*.secrets
+secrets.yaml
+credentials.json
+
+###############################################
+#           PYTHON BASICS
+###############################################
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.egg-info/
+*.egg
+
+# Virtual environments
+venv/
+env/
+.venv/
+ENV/
+env.bak/
+pythonenv*
+
+
+###############################################
+#           PACKAGES
+###############################################
+# Pip
+pip-log.txt
+pip-wheel-metadata/
+
+# Poetry
+poetry.lock
+
+# Conda
+*.conda
+conda-meta/
+
+# Jupyter
+.ipynb_checkpoints/
+.profile
+
+
+###############################################
+#           FLASK / STREAMLIT
+###############################################
+instance/
+.streamlit/
+.streamlit/secrets.toml
+flask_session/
+*.db
+*.sqlite3
+*__pycache__/
+
+# Compiled templates
+*.mo
+*.pot
+
+
+###############################################
+#           LOGS & TEMP FILES
+###############################################
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Cache folders
+.cache/
+.mypy_cache/
+.pytype/
+.pyright/
+pytest_cache/
+
+
+###############################################
+#           DOCKER
+###############################################
+# Docker artifacts
+docker-compose.override.yml
+docker-compose*.local.yml
+
+# Build output
+build/
+dist/
+*.tar
+*.img
+*.dockerfile-backup
+
+
+###############################################
+#           TERRAFORM (DevSecOps IaC)
+###############################################
+# Local .terraform directory
+.terraform/
+.terraform.lock.hcl
+
+# Sensitive Terraform files
+terraform.tfvars
+terraform.tfvars.json
+*.auto.tfvars
+
+# Plan outputs
+*.tfplan
+
+
+###############################################
+#           GITHUB ACTIONS (CI/CD)
+###############################################
+# Ignore local action artifacts
+.github/actions/**/node_modules
+.github/actions/**/dist
+
+
+###############################################
+#           IDE / EDITOR FILES
+###############################################
+# VS Code
+.vscode/
+*.code-workspace
+
+# PyCharm / JetBrains
+.idea/
+*.iml
+
+# Sublime
+*.sublime-project
+*.sublime-workspace
+
+# Other editors
+*.DS_Store
+Thumbs.db
+
+
+###############################################
+#           FRONTEND ASSETS (if exists)
+###############################################
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dist/
+build/
+coverage/
+
+
+###############################################
+#           TESTING
+###############################################
+.coverage
+coverage.xml
+htmlcov/
+
+
+###############################################
+#           MISC
+###############################################
+# Backups
+*.bak
+*.old
+
+# Output / reports
+reports/
+artifacts/

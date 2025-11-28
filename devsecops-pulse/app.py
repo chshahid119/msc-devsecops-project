@@ -6,7 +6,9 @@ from datetime import datetime, timedelta
 import requests
 import random
 
+# ----------------------------
 # 🎨 PAGE CONFIG & THEME MANAGEMENT
+# ----------------------------
 st.set_page_config(
     page_title="DevSecOps Pulse",
     page_icon="🛡️",
