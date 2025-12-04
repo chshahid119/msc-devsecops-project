@@ -1,27 +1,44 @@
-- hosts: all
-  become: yes
-  tasks:
-    - name: Update apt cache
-      apt:
-        update_cache: yes
-
-    - name: Install Docker
-      apt:
-        name: docker.io
-        state: present
-
-    - name: Install Python3 pip
-      apt:
-        name: python3-pip
-        state: present
-
-    - name: Copy application files
+    - name: Copy systemd service
       copy:
-        src: ../app/src/
-        dest: /opt/app/src/
-        mode: '0755'
+        dest: /etc/systemd/system/devsecops-app.service
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=DevSecOps App
+          After=network.target docker.service
 
-    - name: Run application
-      shell: |
-        cd /opt/app/src
-        python3 main.py &
+          [Service]
+          Type=simple
+          User=root
+          WorkingDirectory=/opt/app/src
+          ExecStart=/usr/bin/python3 main.py
+          Restart=on-failure
+          RestartSec=5
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: reload systemd
+      command: systemctl daemon-reload
+
+    - name: enable service
+      service:
+        name: devsecops-app
+        state: started
+        enabled: yes
+
+    - name: Create Docker daemon config to limit privileges
+      copy:
+        dest: /etc/docker/daemon.json
+        content: |
+          {
+            "no-new-privileges": true
+          }
+      notify:
+        - Restart docker
+
+  handlers:
+    - name: Restart docker
+      service:
+        name: docker
+        state: restarted
