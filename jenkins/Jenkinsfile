@@ -17,7 +17,7 @@ pipeline {
         stage('Prepare') {
             steps {
                 sh '''
-                python -m pip install --upgrade pip
+                python3 -m pip install --upgrade pip
                 pip install bandit pip-audit pytest
 
                 # Install gitleaks if missing
