@@ -6,6 +6,15 @@ from datetime import datetime, timedelta
 import requests
 import random
 
+import os
+
+
+st.sidebar.subheader("Reports")
+report_files = [f for f in os.listdir("../reports") if f.endswith(".json")] if os.path.exists("../reports") else []
+for rf in report_files:
+    with open(os.path.join("../reports", rf), "r") as fh:
+        st.sidebar.download_button(label=f"Download {rf}", data=fh.read(), file_name=rf)
+
 # ----------------------------
 # 🎨 PAGE CONFIG & THEME MANAGEMENT
 # ----------------------------
