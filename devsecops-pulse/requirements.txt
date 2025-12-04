@@ -1,4 +1,7 @@
-streamlit==1.39.0
-fastapi==0.104.0
-pandas==2.2.0
-plotly==5.22.0 
+fastapi
+uvicorn[standard]
+requests
+python-dotenv
+streamlit
+pandas
+plotly
