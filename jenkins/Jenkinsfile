@@ -2,7 +2,7 @@ pipeline {
 
     agent {
         docker {
-            image 'secdevops-tools:latest'
+            image 'devsecops-tools:latest'      // ✅ Use your custom tools image
             args '-u root --privileged -v /var/run/docker.sock:/var/run/docker.sock'
         }
     }
@@ -23,10 +23,11 @@ pipeline {
         stage('Prepare') {
             steps {
                 sh '''
-                echo "Environment ready — tools preinstalled in Docker agent."
+                echo "Environment ready — all tools preinstalled in Docker agent."
 
                 mkdir -p ${REPORT_DIR}
 
+                # Verify installed tools
                 python3 --version
                 pip3 --version
                 bandit --version
