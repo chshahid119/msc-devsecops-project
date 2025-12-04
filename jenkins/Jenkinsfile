@@ -1,5 +1,11 @@
 pipeline {
-    agent any
+
+    agent {
+        docker {
+            image 'secdevops-tools:latest'
+            args '-u root --privileged -v /var/run/docker.sock:/var/run/docker.sock'
+        }
+    }
 
     environment {
         DOCKER_IMAGE = "devsecops-app"
@@ -17,25 +23,17 @@ pipeline {
         stage('Prepare') {
             steps {
                 sh '''
-                apt-get update -y
-                apt-get install -y python3 python3-pip curl wget unzip git
-
-                python3 -m pip install --upgrade pip
-                pip3 install bandit pip-audit pytest
-
-                # Install gitleaks if missing
-                which gitleaks || apt-get install -y gitleaks || true
-
-                # Install Trivy if missing
-                which trivy || curl -s https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | bash || true
-
-                # Install Checkov
-                pip3 install checkov || true
-
-                # Install tfsec
-                which tfsec || curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash || true
+                echo "Environment ready — tools preinstalled in Docker agent."
 
                 mkdir -p ${REPORT_DIR}
+
+                python3 --version
+                pip3 --version
+                bandit --version
+                gitleaks version || true
+                trivy --version || true
+                tfsec --version || true
+                checkov --version || true
                 '''
             }
         }
@@ -88,7 +86,6 @@ pipeline {
                 echo "Running Terraform Security Scans..."
 
                 tfsec terraform --format json > reports/tfsec-report.json || true
-
                 checkov -d terraform -o json > reports/checkov-report.json || true
                 '''
             }
@@ -96,8 +93,10 @@ pipeline {
 
         stage('Sign Image (cosign)') {
             steps {
-                sh 'which cosign || echo "cosign not installed – skipping signing step"'
-                sh 'cosign verify --key cosign.pub $DOCKER_IMAGE || true'
+                sh '''
+                which cosign || echo "cosign not installed (skipping signature verification)"
+                cosign verify --key cosign.pub $DOCKER_IMAGE || true
+                '''
             }
         }
 
