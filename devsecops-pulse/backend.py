@@ -1,3 +1,7 @@
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from fastapi.responses import Response
+
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -10,7 +14,40 @@ from typing import List, Dict
 import os
 import random
 
+
+REQUEST_COUNT = Counter('devsecops_requests_total', 'Total requests')
+REQUEST_LATENCY = Histogram('devsecops_request_latency_seconds', 'Request latency')
+
+
+
+
 app = FastAPI(title="DevSecOps Pulse API")
+
+@app.middleware("http")
+async def add_metrics(request, call_next):
+    REQUEST_COUNT.inc()
+    import time
+    start = time.time()
+    response = await call_next(request)
+    REQUEST_LATENCY.observe(time.time() - start)
+    return response
+
+@app.get("/metrics")
+def metrics():
+    data = generate_latest()
+    return Response(content=data, media_type=CONTENT_TYPE_LATEST)
+
+
+
+@app.middleware("http")
+async def set_security_headers(request, call_next):
+    resp = await call_next(request)
+    resp.headers['X-Content-Type-Options'] = 'nosniff'
+    resp.headers['X-Frame-Options'] = 'DENY'
+    resp.headers['Referrer-Policy'] = 'no-referrer'
+    resp.headers['Content-Security-Policy'] = "default-src 'self'"
+    return resp
+
 
 # Allow frontend to connect
 app.add_middleware(
