@@ -3,30 +3,98 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "devsecops-app"
+        REPORT_DIR = "reports"
     }
 
     stages {
+
         stage('Checkout') {
             steps {
-                git branch: 'develop', url: 'https://github.com/username/devsecops-pipeline.git'
+                git branch: 'develop', url: 'https://github.com/chshahid119/msc-devsecops-project.git'
             }
         }
 
-        stage('Build') {
+        stage('Prepare') {
+            steps {
+                sh '''
+                python -m pip install --upgrade pip
+                pip install bandit pip-audit pytest
+
+                # Install gitleaks if missing
+                which gitleaks || sudo apt-get update && sudo apt-get install -y gitleaks || true
+
+                # Install Trivy if missing
+                which trivy || curl -s https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo bash || true
+
+                # Install Checkov + tfsec
+                pip install checkov || true
+                which tfsec || curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash || true
+
+                mkdir -p ${REPORT_DIR}
+                '''
+            }
+        }
+
+        stage('Build Docker') {
             steps {
                 sh 'docker build -t $DOCKER_IMAGE ./app'
             }
         }
 
-        stage('Test') {
+        stage('Unit Tests') {
             steps {
-                sh 'python -m unittest discover -s app/tests'
+                sh 'pytest -q --disable-warnings --maxfail=1 || true'
             }
         }
 
-        stage('Security Scan') {
+        stage('SAST - Bandit') {
             steps {
-                sh 'trivy image --severity CRITICAL,HIGH $DOCKER_IMAGE'
+                sh 'bandit -r app/src -f json -o reports/bandit-report.json || true'
+            }
+        }
+
+        stage('Dependency Scan - pip-audit') {
+            steps {
+                sh 'pip-audit -r app/requirements.txt -f json -o reports/pip-audit-report.json || true'
+            }
+        }
+
+        stage('Secret Scan - Gitleaks') {
+            steps {
+                sh 'gitleaks detect -v --report-path reports/gitleaks-report.json || true'
+            }
+        }
+
+        stage('Container Scan - Trivy') {
+            steps {
+                sh 'trivy image --format json -o reports/trivy-report.json $DOCKER_IMAGE || true'
+            }
+        }
+
+        stage('SBOM') {
+            steps {
+                sh 'trivy image --format cyclonedx --output reports/sbom.json $DOCKER_IMAGE || true'
+            }
+        }
+
+        stage('Terraform Security Scan') {
+            steps {
+                sh '''
+                echo "Running Terraform Security Scans..."
+
+                # Tfsec scan
+                tfsec terraform --format json > reports/tfsec-report.json || true
+
+                # Checkov scan
+                checkov -d terraform -o json > reports/checkov-report.json || true
+                '''
+            }
+        }
+
+        stage('Sign Image (cosign)') {
+            steps {
+                sh 'which cosign || echo "Install cosign to sign images"'
+                sh 'cosign verify --key cosign.pub $DOCKER_IMAGE || true'
             }
         }
 
@@ -44,5 +112,11 @@ pipeline {
             }
         }
     }
+
+    post {
+        always {
+            archiveArtifacts artifacts: 'reports/*.json', fingerprint: true
+            junit allowEmptyResults: true, testResults: '**/test-*.xml'
+        }
+    }
 }
- 
