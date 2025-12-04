@@ -2,7 +2,7 @@ pipeline {
 
     agent {
         docker {
-            image 'devsecops-tools:latest'      // ✅ Use your custom tools image
+            image 'devsecops-tools:latest'   // your custom tools image
             args '-u root --privileged -v /var/run/docker.sock:/var/run/docker.sock'
         }
     }
@@ -23,11 +23,11 @@ pipeline {
         stage('Prepare') {
             steps {
                 sh '''
-                echo "Environment ready — all tools preinstalled in Docker agent."
+                echo "Environment ready — tools preinstalled in Docker agent."
 
                 mkdir -p ${REPORT_DIR}
 
-                # Verify installed tools
+                # Verify tools
                 python3 --version
                 pip3 --version
                 bandit --version
@@ -95,7 +95,7 @@ pipeline {
         stage('Sign Image (cosign)') {
             steps {
                 sh '''
-                which cosign || echo "cosign not installed (skipping signature verification)"
+                which cosign || echo "cosign not installed — skipping signing"
                 cosign verify --key cosign.pub $DOCKER_IMAGE || true
                 '''
             }
