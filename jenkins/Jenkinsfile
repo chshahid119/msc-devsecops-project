@@ -17,17 +17,22 @@ pipeline {
         stage('Prepare') {
             steps {
                 sh '''
+                apt-get update -y
+                apt-get install -y python3 python3-pip curl wget unzip git
+
                 python3 -m pip install --upgrade pip
-                pip install bandit pip-audit pytest
+                pip3 install bandit pip-audit pytest
 
                 # Install gitleaks if missing
-                which gitleaks || sudo apt-get update && sudo apt-get install -y gitleaks || true
+                which gitleaks || apt-get install -y gitleaks || true
 
                 # Install Trivy if missing
-                which trivy || curl -s https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo bash || true
+                which trivy || curl -s https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | bash || true
 
-                # Install Checkov + tfsec
-                pip install checkov || true
+                # Install Checkov
+                pip3 install checkov || true
+
+                # Install tfsec
                 which tfsec || curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash || true
 
                 mkdir -p ${REPORT_DIR}
@@ -82,10 +87,8 @@ pipeline {
                 sh '''
                 echo "Running Terraform Security Scans..."
 
-                # Tfsec scan
                 tfsec terraform --format json > reports/tfsec-report.json || true
 
-                # Checkov scan
                 checkov -d terraform -o json > reports/checkov-report.json || true
                 '''
             }
@@ -93,7 +96,7 @@ pipeline {
 
         stage('Sign Image (cosign)') {
             steps {
-                sh 'which cosign || echo "Install cosign to sign images"'
+                sh 'which cosign || echo "cosign not installed – skipping signing step"'
                 sh 'cosign verify --key cosign.pub $DOCKER_IMAGE || true'
             }
         }
