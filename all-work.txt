@@ -1,0 +1,15 @@
+backend api end points:
+
+Backend (FastAPI)
+
+/api/workflow-runs — paginated runs (with caching & safe token handling)
+
+/api/workflow-run/{run_id} — single run raw details
+
+/api/workflow-run-full/{run_id} — run + jobs + logs (all in one)
+
+/api/workflow-jobs/{run_id} — jobs for a run
+
+/api/logs/{job_id} — job logs (fetched & returned as text)
+
+standardized JSON responses, basic error handling, simple in-memory TTL cache
