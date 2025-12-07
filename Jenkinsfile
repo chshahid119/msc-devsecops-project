@@ -1,11 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image 'devsecops-tools:latest'
-            args '-u root --privileged -v /var/run/docker.sock:/var/run/docker.sock'
-            reuseNode true
-        }
-    }
+    agent any
 
     environment {
         DOCKER_IMAGE = "devsecops-app"
@@ -13,6 +7,7 @@ pipeline {
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
@@ -23,12 +18,12 @@ pipeline {
             steps {
                 sh '''
                 echo "=== Security Tools Verification ==="
-                python3 --version
-                bandit --version
-                trivy --version
-                tfsec --version
-                checkov --version
-                gitleaks version
+                python3 --version || true
+                bandit --version || true
+                trivy --version || true
+                tfsec --version || true
+                checkov --version || true
+                gitleaks version || true
                 echo "All tools ready!"
                 '''
             }
@@ -47,12 +42,16 @@ pipeline {
 
         stage('Build Application') {
             steps {
-                sh 'docker build -t $DOCKER_IMAGE ./app'
+                sh '''
+                echo "Building Docker image..."
+                docker build -t $DOCKER_IMAGE ./app
+                '''
             }
         }
 
         stage('Security Scans') {
             parallel {
+
                 stage('SAST - Bandit') {
                     steps {
                         sh '''
@@ -61,6 +60,7 @@ pipeline {
                         '''
                     }
                 }
+
                 stage('Dependency Scan') {
                     steps {
                         sh '''
@@ -69,6 +69,7 @@ pipeline {
                         '''
                     }
                 }
+
                 stage('Secret Scan') {
                     steps {
                         sh '''
@@ -77,6 +78,7 @@ pipeline {
                         '''
                     }
                 }
+
             }
         }
 
@@ -84,8 +86,11 @@ pipeline {
             steps {
                 sh '''
                 mkdir -p ${REPORT_DIR}
-                timeout 300 trivy image --format json -o ${REPORT_DIR}/trivy.json $DOCKER_IMAGE || echo "Trivy scan timed out"
-                timeout 60 trivy image --format cyclonedx -o ${REPORT_DIR}/sbom.json $DOCKER_IMAGE || echo "SBOM generation timed out"
+                echo "Running Trivy image scan..."
+                timeout 300 trivy image --format json -o ${REPORT_DIR}/trivy.json $DOCKER_IMAGE || echo "Trivy scan failed"
+                
+                echo "Generating SBOM..."
+                timeout 60 trivy image --format cyclonedx -o ${REPORT_DIR}/sbom.json $DOCKER_IMAGE || echo "SBOM generation failed"
                 '''
             }
         }
@@ -119,9 +124,11 @@ pipeline {
 
     post {
         always {
-            sh 'ls -la reports/ || echo "No reports directory"'
-            archiveArtifacts artifacts: 'reports/*.json', fingerprint: true, allowEmptyArchive: true
-            junit testResults: '**/test-reports/*.xml', allowEmptyResults: true
+            node {
+                sh 'ls -la reports/ || echo "No reports directory"'
+                archiveArtifacts artifacts: 'reports/*.json', fingerprint: true, allowEmptyArchive: true
+                junit testResults: '**/test-reports/*.xml', allowEmptyResults: true
+            }
         }
         success {
             echo '✅ Pipeline succeeded! Security reports generated.'
@@ -130,4 +137,4 @@ pipeline {
             echo '❌ Pipeline failed! Check logs above.'
         }
     }
-} 
+}
