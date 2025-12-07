@@ -32,10 +32,8 @@ pipeline {
         stage('Prepare Reports Directory') {
             steps {
                 sh '''
-                echo "Creating reports directory..."
                 mkdir -p ${REPORT_DIR}
                 chmod 777 ${REPORT_DIR}
-                echo "Reports directory created at: ${REPORT_DIR}"
                 '''
             }
         }
@@ -43,7 +41,6 @@ pipeline {
         stage('Build Application') {
             steps {
                 sh '''
-                echo "Building Docker image..."
                 docker build -t $DOCKER_IMAGE ./app
                 '''
             }
@@ -78,7 +75,6 @@ pipeline {
                         '''
                     }
                 }
-
             }
         }
 
@@ -86,11 +82,8 @@ pipeline {
             steps {
                 sh '''
                 mkdir -p ${REPORT_DIR}
-                echo "Running Trivy image scan..."
-                timeout 300 trivy image --format json -o ${REPORT_DIR}/trivy.json $DOCKER_IMAGE || echo "Trivy scan failed"
-                
-                echo "Generating SBOM..."
-                timeout 60 trivy image --format cyclonedx -o ${REPORT_DIR}/sbom.json $DOCKER_IMAGE || echo "SBOM generation failed"
+                timeout 300 trivy image --format json -o ${REPORT_DIR}/trivy.json $DOCKER_IMAGE || true
+                timeout 60 trivy image --format cyclonedx -o ${REPORT_DIR}/sbom.json $DOCKER_IMAGE || true
                 '''
             }
         }
@@ -124,11 +117,9 @@ pipeline {
 
     post {
         always {
-            node {
-                sh 'ls -la reports/ || echo "No reports directory"'
-                archiveArtifacts artifacts: 'reports/*.json', fingerprint: true, allowEmptyArchive: true
-                junit testResults: '**/test-reports/*.xml', allowEmptyResults: true
-            }
+            sh 'ls -la reports/ || echo "No reports directory"'
+            archiveArtifacts artifacts: 'reports/*.json', fingerprint: true, allowEmptyArchive: true
+            junit testResults: '**/test-reports/*.xml', allowEmptyResults: true
         }
         success {
             echo '✅ Pipeline succeeded! Security reports generated.'
