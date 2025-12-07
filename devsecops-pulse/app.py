@@ -5,15 +5,25 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import requests
 import random
-
 import os
 
+# ----------------------------
+# MUST BE THE FIRST STREAMLIT COMMAND
+# ----------------------------
+st.set_page_config(
+    page_title="DevSecOps Pulse",
+    page_icon="🛡️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
+# Now it's safe to use sidebar and other UI
 st.sidebar.subheader("Reports")
 report_files = [f for f in os.listdir("../reports") if f.endswith(".json")] if os.path.exists("../reports") else []
 for rf in report_files:
     with open(os.path.join("../reports", rf), "r") as fh:
         st.sidebar.download_button(label=f"Download {rf}", data=fh.read(), file_name=rf)
+
 
 # ----------------------------
 # 🎨 PAGE CONFIG & THEME MANAGEMENT
